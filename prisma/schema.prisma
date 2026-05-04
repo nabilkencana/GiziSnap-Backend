@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String     @id @default(uuid())
+  email            String     @unique
+  name             String?
+  password         String
+  goal             String     @default("WEIGHT_LOSS")
+  targetCalories   Int        @default(2000)
+  logs             DailyLog[]
+  createdFoods     Food[]
+  createdAt        DateTime   @default(now())
+}
+
+model Food {
+  id           String     @id @default(uuid())
+  name         String
+  calories     Float
+  protein      Float
+  carbs        Float
+  fat          Float
+  imageUrl     String?
+  isVerified   Boolean    @default(false)
+  upvotes      Int        @default(0)
+  createdBy    User?      @relation(fields: [userId], references: [id])
+  userId       String?
+  logs         DailyLog[]
+  createdAt    DateTime   @default(now())
+}
+
+model DailyLog {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  food      Food     @relation(fields: [foodId], references: [id])
+  foodId    String
+  portion   Float    @default(1.0) 
+  createdAt DateTime @default(now())
+}
