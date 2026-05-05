@@ -19,8 +19,19 @@ async function bootstrap() {
     whitelist: true,
     transform: true,
   }));
-  app.enableCors();
+
+  // CORS: izinkan frontend Vercel dan localhost
+  app.enableCors({
+    origin: [
+      'https://gizisnap.vercel.app',
+      /\.vercel\.app$/,
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
+
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();
-
