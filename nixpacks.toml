@@ -1,14 +1,13 @@
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
-# Install ALL dependencies (including devDeps) so nest build can work
 cmds = ["npm install"]
 
 [phases.build]
 cmds = [
   "npx prisma generate",
-  "npx nest build"
+  "npm run build"
 ]
 
 [start]
