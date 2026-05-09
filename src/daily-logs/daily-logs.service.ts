@@ -4,7 +4,7 @@ import { CreateLogDto } from './dto/create-log.dto';
 
 @Injectable()
 export class DailyLogsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async createLog(createLogDto: CreateLogDto) {
     const { userId, foodId, portion } = createLogDto;
@@ -46,9 +46,9 @@ export class DailyLogsService {
       (acc, log) => {
         if (log.food) {
           acc.totalCalories += log.food.calories * log.portion;
-          acc.totalProtein  += log.food.protein  * log.portion;
-          acc.totalCarbs    += log.food.carbs    * log.portion;
-          acc.totalFat      += log.food.fat      * log.portion;
+          acc.totalProtein += log.food.protein * log.portion;
+          acc.totalCarbs += log.food.carbs * log.portion;
+          acc.totalFat += log.food.fat * log.portion;
         }
         return acc;
       },
@@ -65,10 +65,10 @@ export class DailyLogsService {
 
   async getWeeklyLogs(userId: string) {
     const result = [];
-    
+
     const end = new Date();
     end.setHours(23, 59, 59, 999);
-    
+
     const start = new Date();
     start.setDate(start.getDate() - 6);
     start.setHours(0, 0, 0, 0);
@@ -82,7 +82,7 @@ export class DailyLogsService {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateString = d.toISOString().split('T')[0];
-      
+
       const dailyLogs = logs.filter(
         (log) => log.createdAt.toISOString().split('T')[0] === dateString
       );
@@ -98,14 +98,14 @@ export class DailyLogsService {
         isToday: i === 0,
       });
     }
-    
+
     return result;
   }
 
   async getRecommendations(userId: string, goal: string) {
     // ── 1. Ambil log hari ini ──────────────────────────────────────────────
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const todayLogs = await this.prisma.dailyLog.findMany({
       where: { userId, createdAt: { gte: todayStart, lte: todayEnd } },
@@ -117,9 +117,9 @@ export class DailyLogsService {
       (acc, log) => {
         if (log.food) {
           acc.calories += log.food.calories * log.portion;
-          acc.protein  += log.food.protein  * log.portion;
-          acc.carbs    += log.food.carbs    * log.portion;
-          acc.fat      += log.food.fat      * log.portion;
+          acc.protein += log.food.protein * log.portion;
+          acc.carbs += log.food.carbs * log.portion;
+          acc.fat += log.food.fat * log.portion;
         }
         return acc;
       },
@@ -131,26 +131,37 @@ export class DailyLogsService {
 
     // ── 2. Target berdasarkan goal ─────────────────────────────────────────
     const TARGET: Record<string, { cal: number; protein: number; carbs: number; fat: number }> = {
-      WEIGHT_LOSS:   { cal: 1500, protein: 90,  carbs: 150, fat: 45 },
-      DIABETES_CARE: { cal: 1800, protein: 80,  carbs: 130, fat: 60 },
-      BODYBUILDING:  { cal: 2800, protein: 185, carbs: 280, fat: 70 },
+      WEIGHT_LOSS: { cal: 1500, protein: 90, carbs: 150, fat: 45 },
+      DIABETES_CARE: { cal: 1800, protein: 80, carbs: 130, fat: 60 },
+      BODYBUILDING: { cal: 2800, protein: 185, carbs: 280, fat: 70 },
     };
     // Normalise goal string
     const goalKey = goal?.toUpperCase().replace('-', '_').replace(' ', '_');
     const target = TARGET[goalKey] ?? TARGET['WEIGHT_LOSS'];
 
     const deficit = {
-      calories: Math.max(target.cal     - consumed.calories, 0),
-      protein:  Math.max(target.protein - consumed.protein,  0),
-      carbs:    Math.max(target.carbs   - consumed.carbs,    0),
-      fat:      Math.max(target.fat     - consumed.fat,      0),
+      calories: Math.max(target.cal - consumed.calories, 0),
+      protein: Math.max(target.protein - consumed.protein, 0),
+      carbs: Math.max(target.carbs - consumed.carbs, 0),
+      fat: Math.max(target.fat - consumed.fat, 0),
     };
 
-    // ── 3. Ambil semua makanan terverifikasi (scoring dilakukan di JS) ───────
+    // ── 3. Filter makanan dari DB berdasarkan goal ─────────────────────────
+    type FoodFilter = { calories?: { lte: number }; protein?: { gte: number }; carbs?: { lte: number } };
+    let where: FoodFilter = {};
+
+    if (goalKey === 'WEIGHT_LOSS') {
+      where = { calories: { lte: 300 }, protein: { gte: 5 } };
+    } else if (goalKey === 'DIABETES_CARE') {
+      where = { carbs: { lte: 25 } };
+    } else if (goalKey === 'BODYBUILDING') {
+      where = { protein: { gte: 10 } };
+    }
+
     const allFoods = await this.prisma.food.findMany({
-      where: { calories: { gt: 0 } },
+      where,
       orderBy: [{ isVerified: 'desc' }, { upvotes: 'desc' }],
-      take: 120,
+      take: 80,
     });
 
     // ── 4. Scoring & filter ────────────────────────────────────────────────
@@ -166,28 +177,28 @@ export class DailyLogsService {
           score += f.protein * 3;
           score -= f.fat * 1.5;
           if (f.calories < 150) reasons.push('Kalori sangat rendah');
-          if (f.protein >= 10)  reasons.push('Tinggi protein');
-          if (f.fat < 5)        reasons.push('Rendah lemak');
+          if (f.protein >= 10) reasons.push('Tinggi protein');
+          if (f.fat < 5) reasons.push('Rendah lemak');
         } else if (goalKey === 'DIABETES_CARE') {
           score += Math.max(0, 25 - f.carbs) * 4;
           score += f.protein * 2;
           score -= f.fat * 1;
-          if (f.carbs <= 10)   reasons.push('Karbo sangat rendah');
-          if (f.carbs <= 20)   reasons.push('Aman untuk gula darah');
-          if (f.protein >= 8)  reasons.push('Sumber protein baik');
+          if (f.carbs <= 10) reasons.push('Karbo sangat rendah');
+          if (f.carbs <= 20) reasons.push('Aman untuk gula darah');
+          if (f.protein >= 8) reasons.push('Sumber protein baik');
         } else if (goalKey === 'BODYBUILDING') {
           score += f.protein * 5;
           score += f.calories / 10;
           score -= Math.max(0, f.fat - 20) * 2;
-          if (f.protein >= 20)  reasons.push('Protein sangat tinggi');
-          if (f.protein >= 10)  reasons.push('Mendukung massa otot');
+          if (f.protein >= 20) reasons.push('Protein sangat tinggi');
+          if (f.protein >= 10) reasons.push('Mendukung massa otot');
           if (f.calories >= 200) reasons.push('Kalori cukup untuk bulking');
         }
 
         // Bonus jika mengisi defisit
-        if (deficit.protein > 20 && f.protein >= 10)  { score += 15; reasons.push('Bantu kejar target protein'); }
+        if (deficit.protein > 20 && f.protein >= 10) { score += 15; reasons.push('Bantu kejar target protein'); }
         if (deficit.calories > 300 && f.calories > 0) { score += 8; }
-        if (deficit.carbs > 50 && f.carbs >= 20)      { score += 5; }
+        if (deficit.carbs > 50 && f.carbs >= 20) { score += 5; }
 
         // Deduplicate reasons, max 2
         const uniqueReasons = [...new Set(reasons)].slice(0, 2);
@@ -200,20 +211,20 @@ export class DailyLogsService {
     return {
       consumed: {
         calories: Math.round(consumed.calories),
-        protein:  Math.round(consumed.protein),
-        carbs:    Math.round(consumed.carbs),
-        fat:      Math.round(consumed.fat),
+        protein: Math.round(consumed.protein),
+        carbs: Math.round(consumed.carbs),
+        fat: Math.round(consumed.fat),
       },
       target,
       deficit: {
         calories: Math.round(deficit.calories),
-        protein:  Math.round(deficit.protein),
-        carbs:    Math.round(deficit.carbs),
-        fat:      Math.round(deficit.fat),
+        protein: Math.round(deficit.protein),
+        carbs: Math.round(deficit.carbs),
+        fat: Math.round(deficit.fat),
       },
       recommendations: scored.map(s => ({
-        food:   s.food,
-        score:  Math.round(s.score),
+        food: s.food,
+        score: Math.round(s.score),
         reason: s.reason,
       })),
     };

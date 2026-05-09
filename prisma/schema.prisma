@@ -15,17 +15,6 @@ model User {
   password         String
   goal             String     @default("WEIGHT_LOSS")
   targetCalories   Int        @default(2000)
-  targetProtein    Float?
-  targetCarbs      Float?
-  targetFat        Float?
-  weight           Float?
-  height           Float?
-  age              Int?
-  gender           String?
-  activityLevel    String?    @default("sedentary")
-  healthConditions String[]   @default([])
-  waterTarget      Float?
-  profileComplete  Boolean    @default(false)
   logs             DailyLog[]
   createdFoods     Food[]
   createdAt        DateTime   @default(now())
