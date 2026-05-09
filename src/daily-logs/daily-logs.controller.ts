@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Query } from '@nestjs/common';
 import { DailyLogsService } from './daily-logs.service';
 import { CreateLogDto } from './dto/create-log.dto';
 
@@ -25,4 +25,13 @@ export class DailyLogsController {
   async getWeeklyLogs(@Param('userId') userId: string) {
     return this.dailyLogsService.getWeeklyLogs(userId);
   }
+
+  @Get('recommend/:userId')
+  async getRecommendations(
+    @Param('userId') userId: string,
+    @Query('goal') goal: string,
+  ) {
+    return this.dailyLogsService.getRecommendations(userId, goal ?? 'WEIGHT_LOSS');
+  }
 }
+
