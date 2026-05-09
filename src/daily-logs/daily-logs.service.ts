@@ -146,22 +146,11 @@ export class DailyLogsService {
       fat:      Math.max(target.fat     - consumed.fat,      0),
     };
 
-    // ── 3. Filter makanan dari DB berdasarkan goal ─────────────────────────
-    type FoodFilter = { calories?: { lte: number }; protein?: { gte: number }; carbs?: { lte: number } };
-    let where: FoodFilter = {};
-
-    if (goalKey === 'WEIGHT_LOSS') {
-      where = { calories: { lte: 300 }, protein: { gte: 5 } };
-    } else if (goalKey === 'DIABETES_CARE') {
-      where = { carbs: { lte: 25 } };
-    } else if (goalKey === 'BODYBUILDING') {
-      where = { protein: { gte: 10 } };
-    }
-
+    // ── 3. Ambil semua makanan terverifikasi (scoring dilakukan di JS) ───────
     const allFoods = await this.prisma.food.findMany({
-      where,
+      where: { calories: { gt: 0 } },
       orderBy: [{ isVerified: 'desc' }, { upvotes: 'desc' }],
-      take: 80,
+      take: 120,
     });
 
     // ── 4. Scoring & filter ────────────────────────────────────────────────

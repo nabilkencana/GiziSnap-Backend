@@ -1,5 +1,5 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Param } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { Controller, Post, Put, Body, HttpCode, HttpStatus, Param } from '@nestjs/common';
+import { AuthService, ProfileDto } from './auth.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 
 @Controller('api/auth')
@@ -30,6 +30,15 @@ export class AuthController {
     @Param('userId') userId: string
   ) {
     return this.authService.updateGoal(userId, dto.goal);
+  }
+
+  @Put(':userId/profile')
+  @HttpCode(HttpStatus.OK)
+  updateProfile(
+    @Param('userId') userId: string,
+    @Body() dto: ProfileDto,
+  ) {
+    return this.authService.updateProfile(userId, dto);
   }
 }
 
