@@ -23,7 +23,7 @@ async function bootstrap() {
     const isAllowed =
       ALLOWED_ORIGINS.includes(origin) ||
       /\.vercel\.app$/.test(origin) ||
-      origin === '';
+      origin === ''; 
 
     if (isAllowed) {
       res.header('Access-Control-Allow-Origin', origin || '*');
