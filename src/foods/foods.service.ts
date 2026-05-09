@@ -8,11 +8,19 @@ export class FoodsService {
 
   async create(createFoodDto: CreateFoodDto) {
     const { userId, ...rest } = createFoodDto;
+
+    // Verify user exists before linking — prevents FK violation after DB reset
+    let validUserId: string | undefined;
+    if (userId) {
+      const userExists = await this.prisma.user.findUnique({ where: { id: userId } });
+      validUserId = userExists ? userId : undefined;
+    }
+
     return this.prisma.food.create({
       data: {
         ...rest,
         isVerified: false,
-        ...(userId ? { userId } : {}),
+        ...(validUserId ? { userId: validUserId } : {}),
       },
     });
   }
