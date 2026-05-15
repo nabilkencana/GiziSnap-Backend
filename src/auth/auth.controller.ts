@@ -19,8 +19,8 @@ export class AuthController {
 
   @Post('google')
   @HttpCode(HttpStatus.OK)
-  google(@Body() dto: { email: string; name: string }) {
-    return this.authService.googleLogin(dto.email, dto.name);
+  google(@Body() dto: { idToken: string }) {
+    return this.authService.googleLogin(dto.idToken);
   }
 
   @Post(':userId/goal')

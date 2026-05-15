@@ -1,7 +1,10 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 @Injectable()
 export class AuthService {
@@ -37,10 +40,39 @@ export class AuthService {
     return result;
   }
 
-  async googleLogin(email: string, name: string) {
+  /**
+   * Verifikasi Google ID Token dari Google Identity Services (GSI).
+   * Tidak mempercayai email/nama dari frontend — semua diambil dari token yang
+   * sudah diverifikasi secara kriptografis oleh Google.
+   */
+  async googleLogin(idToken: string) {
+    if (!idToken) throw new BadRequestException('ID Token tidak boleh kosong');
+
+    let email: string;
+    let name: string;
+
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new UnauthorizedException('Token Google tidak valid');
+      }
+      email = payload.email;
+      name = payload.name || payload.email.split('@')[0] || 'Pengguna Google';
+    } catch (e) {
+      throw new UnauthorizedException('Gagal memverifikasi token Google: ' + (e as Error).message);
+    }
+
+    // Upsert: buat user baru jika belum ada, atau gunakan yang sudah ada
     let user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      const hashed = await bcrypt.hash(Math.random().toString(36).slice(-8) + 'Google1!', 10);
+      const hashed = await bcrypt.hash(
+        Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + 'Ggl!',
+        10,
+      );
       user = await this.prisma.user.create({
         data: {
           email,
@@ -51,6 +83,7 @@ export class AuthService {
         },
       });
     }
+
     const { password: _, ...result } = user;
     return result;
   }

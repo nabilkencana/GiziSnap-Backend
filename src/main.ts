@@ -8,6 +8,7 @@ const ALLOWED_ORIGINS = [
   'https://gizisnap.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  // Cloud Run frontend (pattern match di bawah)
 ];
 
 async function bootstrap() {
@@ -23,6 +24,7 @@ async function bootstrap() {
     const isAllowed =
       ALLOWED_ORIGINS.includes(origin) ||
       /\.vercel\.app$/.test(origin) ||
+      /\.run\.app$/.test(origin) ||   // Google Cloud Run URLs
       origin === ''; 
 
     if (isAllowed) {
