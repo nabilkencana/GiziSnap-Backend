@@ -8,6 +8,7 @@ const ALLOWED_ORIGINS = [
   'https://gizisnap.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://gizisnap-frontend-1004063957486.asia-southeast2.run.app'
   // Cloud Run frontend (pattern match di bawah)
 ];
 
